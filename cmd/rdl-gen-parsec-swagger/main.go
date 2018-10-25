@@ -113,8 +113,17 @@ func swagger(schema *rdl.Schema, genParsecError bool, swaggerScheme string, fina
 	swag := new(SwaggerDoc)
 	swag.Swagger = "2.0"
 	swag.Schemes = []string{}
-	//swag.Host = "localhost"
-	// swag.BasePath = "/api"
+	swag.SecurityDefinitions = make(map[string]*SwaggerSecurityDefinition)
+	athenzSecurityDefinition := new(SwaggerSecurityDefinition)
+	athenzSecurityDefinition.Name = "Yahoo-Role-Auth"
+	athenzSecurityDefinition.In = "header"
+	athenzSecurityDefinition.Type = "apiKey"
+	cookieSecurityDefinition := new(SwaggerSecurityDefinition)
+	cookieSecurityDefinition.Name = "Cookie"
+	cookieSecurityDefinition.In = "header"
+	cookieSecurityDefinition.Type = "apiKey"
+	swag.SecurityDefinitions["athenz"] = athenzSecurityDefinition
+	swag.SecurityDefinitions["cookie"] = cookieSecurityDefinition
 
 	if swaggerScheme == "http" || swaggerScheme == "https" || swaggerScheme == "ws" || swaggerScheme == "wss" {
 		swag.Schemes = append(swag.Schemes, swaggerScheme)
@@ -137,13 +146,11 @@ func swagger(schema *rdl.Schema, genParsecError bool, swaggerScheme string, fina
 	title := "API"
 	if schema.Name != "" {
 		title = "The " + string(schema.Name) + " API"
-		//swag.BasePath = "/api/" + schema.Name
 	}
 	swag.Info = new(SwaggerInfo)
 	swag.Info.Title = title
 	if schema.Version != nil {
 		swag.Info.Version = fmt.Sprintf("%d", *schema.Version)
-		//swag.BasePath += "/v" + fmt.Sprintf("%d", *schema.Version)
 	}
 	if schema.Comment != "" {
 		swag.Info.Description = schema.Comment
@@ -229,12 +236,12 @@ func swagger(schema *rdl.Schema, genParsecError bool, swaggerScheme string, fina
 				}
 			}
 			action.Responses = responses
-			//responses -> r.expected and r.exceptions
-			//security -> r.auth
-			//r.outputs?
-			//action.description?
-			//action.operationId IGNORE
-
+			action.Security = []map[string][]string{}
+			if r.Auth != nil && r.Auth.Domain != "" {
+				snap := make(map[string][]string)
+				snap[r.Auth.Domain] = []string{}
+				action.Security = append(action.Security, snap)
+			}
 			actions[meth] = action
 			paths[path] = actions
 		}
@@ -519,16 +526,23 @@ func makeSwaggerTypeDef(reg rdl.TypeRegistry, t *rdl.Type) *SwaggerType {
 	return st
 }
 
+type SwaggerSecurityDefinition struct {
+	Type string `json:"type"`
+	Name string `json:"name"`
+	In   string `json:"in"`
+}
+
 // SwaggerDoc is a representation of the top level object in swagger 2.0
 type SwaggerDoc struct {
-	Swagger     string                               `json:"swagger"`
-	Info        *SwaggerInfo                         `json:"info"`
-	Host        string                               `json:"host,omitempty" rdl:"optional"`
-	BasePath    string                               `json:"basePath"`
-	Schemes     []string                             `json:"schemes"`
-	Paths       map[string]map[string]*SwaggerAction `json:"paths,omitempty"`
-	Security    *map[string][]string                 `json:"security,omitempty"`
-	Definitions map[string]*SwaggerType              `json:"definitions,omitempty"`
+	Swagger             string                                `json:"swagger"`
+	SecurityDefinitions map[string]*SwaggerSecurityDefinition `json:"securityDefinitions"`
+	Info                *SwaggerInfo                          `json:"info"`
+	Host                string                                `json:"host,omitempty" rdl:"optional"`
+	BasePath            string                                `json:"basePath"`
+	Schemes             []string                              `json:"schemes"`
+	Paths               map[string]map[string]*SwaggerAction  `json:"paths,omitempty"`
+	Security            *map[string][]string                  `json:"security,omitempty"`
+	Definitions         map[string]*SwaggerType               `json:"definitions,omitempty"`
 }
 
 // SwaggerInfo -
@@ -564,7 +578,7 @@ type SwaggerAction struct {
 	Produces    []string                    `json:"produces,omitempty"`
 	Parameters  []*SwaggerParameter         `json:"parameters,omitempty"`
 	Responses   map[string]*SwaggerResponse `json:"responses,omitempty"`
-	Security    map[string][]string         `json:"security,omitempty"`
+	Security    []map[string][]string       `json:"security,omitempty"`
 }
 
 // SwaggerParameter -
@@ -601,55 +615,3 @@ type SwaggerType struct {
 	AdditionalProperties *SwaggerType           `json:"additionalProperties,omitempty"`
 	Example              interface{}            `json:"example,omitempty"`
 }
-
-/*
- * Swagger 1.4
-
-type SwaggerResource struct {
-	ApiVersion     string  `json:"apiVersion"`
-	SwaggerVersion string `json:"swaggerVersion"`
-	BasePath       string `json:"basePath"`
-	ResourcePath   string `json:"resourcePath"`
-	Produces       []string `json:"produces,omitempty"`
-	Apis           []SwaggerApi
-}
-
-type SwaggerApi struct {
-	Path string `json:"path"`
-	Operations []SwaggerOperation `json:"operations"`
-}
-
-type SwaggerOperation struct {
-	Method string `json:"method"`
-	Summary string `json:"summary"`
-	Notes string `json:"notes"`
-	Type string `json:"type"`
-	Nickname string `json:"nickname"`
-	Authorizations SwaggerAuthorization `json:"authorizations,omitempty"`
-	Parameters []SwaggerParameter `json:"parameters,omitempty"`
-	ResponseMessages []SwaggerResponseMessage `json:"responseMessages,omitempty"`
-}
-
-type SwaggerParameter struct {
-	Name string `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Required bool `json:"required"`
-	Type string `json:"type"`
-	ParamType string `json:"paramType"`
-	AllowMultiple bool `json:"allowMultiple"`
-}
-
-type SwaggerResponseMessage struct {
-	Code int32 `json:"code"`
-	Message string `json:"message"`
-}
-
-type SwaggerAuthorization struct {
-	Oauth2 []SwaggerOauth2 `json:"oauth2,omitempty"`
-}
-
-type SwaggerOauth2 struct {
-	Scope string `json:"scope"`
-	Description *string `json:"description,omitempty"`
-}
-*/
