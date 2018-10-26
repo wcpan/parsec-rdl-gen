@@ -118,10 +118,15 @@ func swagger(schema *rdl.Schema, genParsecError bool, swaggerScheme string, fina
 	athenzSecurityDefinition.Name = "Yahoo-Role-Auth"
 	athenzSecurityDefinition.In = "header"
 	athenzSecurityDefinition.Type = "apiKey"
+	ycaSecurityDefinition := new(SwaggerSecurityDefinition)
+	ycaSecurityDefinition.Name = "Yahoo-Role-Auth"
+	ycaSecurityDefinition.In = "header"
+	ycaSecurityDefinition.Type = "apiKey"
 	cookieSecurityDefinition := new(SwaggerSecurityDefinition)
 	cookieSecurityDefinition.Name = "Cookie"
 	cookieSecurityDefinition.In = "header"
 	cookieSecurityDefinition.Type = "apiKey"
+	swag.SecurityDefinitions["yca"] = ycaSecurityDefinition
 	swag.SecurityDefinitions["athenz"] = athenzSecurityDefinition
 	swag.SecurityDefinitions["cookie"] = cookieSecurityDefinition
 
